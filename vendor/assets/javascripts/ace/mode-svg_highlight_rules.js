@@ -38,41 +38,48 @@
 define(function(require, exports, module) {
 
 var oop = require("pilot/oop");
-var TextMode = require("ace/mode/text").Mode;
-var JavaScriptMode = require("ace/mode/javascript").Mode;
-var CssMode = require("ace/mode/css").Mode;
-var Tokenizer = require("ace/tokenizer").Tokenizer;
-var HtmlHighlightRules = require("ace/mode/html_highlight_rules").HtmlHighlightRules;
-var XmlBehaviour = require("ace/mode/behaviour/xml").XmlBehaviour;
+var JavaScriptHighlightRules = require("ace/mode/javascript_highlight_rules").JavaScriptHighlightRules;
+var XmlHighlightRules = require("ace/mode/xml_highlight_rules").XmlHighlightRules;
 
-var Mode = function() {
-    var highlighter = new HtmlHighlightRules();
-    this.$tokenizer = new Tokenizer(highlighter.getRules());
-    this.$behaviour = new XmlBehaviour();
-    
-    this.$embeds = highlighter.getEmbeds();
-    this.createModeDelegates({
-      "js-": JavaScriptMode,
-      "css-": CssMode
+var SvgHighlightRules = function() {
+    XmlHighlightRules.call(this);
+
+    this.$rules.start.splice(3, 0, {
+        token : "text",
+        regex : "<(?=\s*script)",
+        next : "script"
     });
+    this.$rules.script = [{
+        token : "text",
+        regex : ">",
+        next : "js-start"
+    }, {
+        token : "keyword",
+        regex : "[-_a-zA-Z0-9:]+"
+    }, {
+        token : "text",
+        regex : "\\s+"
+    }, {
+        token : "string",
+        regex : '".*?"'
+    }, {
+        token : "string",
+        regex : "'.*?'"
+    }];
+    
+    this.embedRules(JavaScriptHighlightRules, "js-", [{
+        token: "comment",
+        regex: "\\/\\/.*(?=<\\/script>)",
+        next: "tag"
+    }, {
+        token: "text",
+        regex: "<\\/(?=script)",
+        next: "tag"
+    }]);
+
 };
-oop.inherits(Mode, TextMode);
 
-(function() {
+oop.inherits(SvgHighlightRules, XmlHighlightRules);
 
-    this.toggleCommentLines = function(state, doc, startRow, endRow) {
-        return 0;
-    };
-
-    this.getNextLineIndent = function(state, line, tab) {
-        return this.$getIndent(line);
-    };
-
-    this.checkOutdent = function(state, line, input) {
-        return false;
-    };
-
-}).call(Mode.prototype);
-
-exports.Mode = Mode;
+exports.SvgHighlightRules = SvgHighlightRules;
 });

@@ -37,42 +37,74 @@
 
 define(function(require, exports, module) {
 
-var oop = require("pilot/oop");
-var TextMode = require("ace/mode/text").Mode;
-var JavaScriptMode = require("ace/mode/javascript").Mode;
-var CssMode = require("ace/mode/css").Mode;
-var Tokenizer = require("ace/tokenizer").Tokenizer;
-var HtmlHighlightRules = require("ace/mode/html_highlight_rules").HtmlHighlightRules;
-var XmlBehaviour = require("ace/mode/behaviour/xml").XmlBehaviour;
+var lang = require("pilot/lang");
 
-var Mode = function() {
-    var highlighter = new HtmlHighlightRules();
-    this.$tokenizer = new Tokenizer(highlighter.getRules());
-    this.$behaviour = new XmlBehaviour();
-    
-    this.$embeds = highlighter.getEmbeds();
-    this.createModeDelegates({
-      "js-": JavaScriptMode,
-      "css-": CssMode
-    });
+var TextHighlightRules = function() {
+
+    // regexp must not have capturing parentheses
+    // regexps are ordered -> the first match is used
+
+    this.$rules = {
+        "start" : [ {
+            token : "empty_line",
+            regex : '^$'
+        }, {
+            token : "text",
+            regex : ".+"
+        } ]
+    };
 };
-oop.inherits(Mode, TextMode);
 
 (function() {
 
-    this.toggleCommentLines = function(state, doc, startRow, endRow) {
-        return 0;
+    this.addRules = function(rules, prefix) {
+        for (var key in rules) {
+            var state = rules[key];
+            for (var i=0; i<state.length; i++) {
+                var rule = state[i];
+                if (rule.next) {
+                    rule.next = prefix + rule.next;
+                } else {
+                    rule.next = prefix + key;
+                }
+            }
+            this.$rules[prefix + key] = state;
+        }
     };
 
-    this.getNextLineIndent = function(state, line, tab) {
-        return this.$getIndent(line);
+    this.getRules = function() {
+        return this.$rules;
     };
+    
+    this.embedRules = function (HighlightRules, prefix, escapeRules, states) {
+        var embedRules = new HighlightRules().getRules();
+        if (states) {
+            for (var i = 0; i < states.length; i++) {
+                states[i] = prefix + states[i];
+            }
+        } else {
+            states = [];
+            for (var key in embedRules) {
+                states.push(prefix + key);
+            }
+        }
+        this.addRules(embedRules, prefix);
+        
+        for (var i = 0; i < states.length; i++) {
+            Array.prototype.unshift.apply(this.$rules[states[i]], lang.deepCopy(escapeRules));
+        }
+        
+        if (!this.$embeds) {
+            this.$embeds = [];
+        }
+        this.$embeds.push(prefix);
+    }
+    
+    this.getEmbeds = function() {
+        return this.$embeds;
+    }
 
-    this.checkOutdent = function(state, line, input) {
-        return false;
-    };
+}).call(TextHighlightRules.prototype);
 
-}).call(Mode.prototype);
-
-exports.Mode = Mode;
+exports.TextHighlightRules = TextHighlightRules;
 });

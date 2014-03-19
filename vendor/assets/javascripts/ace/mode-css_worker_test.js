@@ -35,44 +35,40 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+if (typeof process !== "undefined") {
+    require("../../../support/paths");
+}
+
 define(function(require, exports, module) {
 
-var oop = require("pilot/oop");
-var TextMode = require("ace/mode/text").Mode;
-var JavaScriptMode = require("ace/mode/javascript").Mode;
-var CssMode = require("ace/mode/css").Mode;
-var Tokenizer = require("ace/tokenizer").Tokenizer;
-var HtmlHighlightRules = require("ace/mode/html_highlight_rules").HtmlHighlightRules;
-var XmlBehaviour = require("ace/mode/behaviour/xml").XmlBehaviour;
+var assert = require("ace/test/assertions");
+var Worker = require("ace/mode/css_worker").Worker;
 
-var Mode = function() {
-    var highlighter = new HtmlHighlightRules();
-    this.$tokenizer = new Tokenizer(highlighter.getRules());
-    this.$behaviour = new XmlBehaviour();
+
+module.exports = {
+    setUp : function() {
+        this.sender = {
+            on: function() {},
+            callback: function(data, id) {
+                this.data = data;
+            },
+            events: [],
+            emit: function(type, e) {
+                this.events.push([type, e]);
+            }
+        };
+    },
     
-    this.$embeds = highlighter.getEmbeds();
-    this.createModeDelegates({
-      "js-": JavaScriptMode,
-      "css-": CssMode
-    });
+    "test check for syntax error": function() {
+        var worker = new Worker(this.sender);
+        worker.setValue("Juhu Kinners");
+        worker.deferredUpdate.call();
+        assert.equal(this.sender.events[0][1][0].type, "error");
+    }
 };
-oop.inherits(Mode, TextMode);
 
-(function() {
-
-    this.toggleCommentLines = function(state, doc, startRow, endRow) {
-        return 0;
-    };
-
-    this.getNextLineIndent = function(state, line, tab) {
-        return this.$getIndent(line);
-    };
-
-    this.checkOutdent = function(state, line, input) {
-        return false;
-    };
-
-}).call(Mode.prototype);
-
-exports.Mode = Mode;
 });
+
+if (typeof module !== "undefined" && module === require.main) {
+    require("asyncjs").test.testcase(module.exports).exec();
+}

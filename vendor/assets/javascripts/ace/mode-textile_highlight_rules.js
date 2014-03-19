@@ -19,7 +19,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *      Fabian Jakobs <fabian AT ajax DOT org>
+ *      Kelley van Evert <kelley.vanevert@gmail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -38,41 +38,73 @@
 define(function(require, exports, module) {
 
 var oop = require("pilot/oop");
-var TextMode = require("ace/mode/text").Mode;
-var JavaScriptMode = require("ace/mode/javascript").Mode;
-var CssMode = require("ace/mode/css").Mode;
-var Tokenizer = require("ace/tokenizer").Tokenizer;
-var HtmlHighlightRules = require("ace/mode/html_highlight_rules").HtmlHighlightRules;
-var XmlBehaviour = require("ace/mode/behaviour/xml").XmlBehaviour;
+var TextHighlightRules = require("ace/mode/text_highlight_rules").TextHighlightRules;
 
-var Mode = function() {
-    var highlighter = new HtmlHighlightRules();
-    this.$tokenizer = new Tokenizer(highlighter.getRules());
-    this.$behaviour = new XmlBehaviour();
+var TextileHighlightRules = function()
+{
+/*
+    var phraseModifiers = lang.arrayToMap(
+        ("_|*|__|**|??|-|+|^|%|@").split("|")
+    );
     
-    this.$embeds = highlighter.getEmbeds();
-    this.createModeDelegates({
-      "js-": JavaScriptMode,
-      "css-": CssMode
-    });
+    var blockModifiers = lang.arrayToMap(
+        ("h1|h2|h3|h4|h5|h6|bq|p|bc|pre").split("|")
+    );
+    */
+    /*
+    var punctuation = lang.arrayToMap(
+        ("-|--|(tm)|(r)|(c)").split("|")
+    );
+    */
+    
+    this.$rules = {
+        "start" : [
+            {
+                token : "keyword", // start of block
+                regex : "h1|h2|h3|h4|h5|h6|bq|p|bc|pre",
+                next  : "blocktag"
+            },
+            {
+                token : "keyword",
+                regex : "[\\*]+|[#]+"
+            },
+            {
+                token : "text",
+                regex : ".+"
+            }
+        ],
+        "blocktag" : [
+            {
+                token : "keyword",
+                regex : "\\. ",
+                next  : "start",
+            },
+            {
+                token : "keyword",
+                regex : "\\(",
+                next  : "blocktagproperties"
+            },
+        ],
+        "blocktagproperties" : [
+            {
+                token : "keyword",
+                regex : "\\)",
+                next  : "blocktag"
+            },
+            {
+                token : "string",
+                regex : "[a-zA-Z0-9\\-_]+"
+            },
+            {
+                token : "keyword",
+                regex : "#"
+            },
+        ]
+    };
 };
-oop.inherits(Mode, TextMode);
 
-(function() {
+oop.inherits(TextileHighlightRules, TextHighlightRules);
 
-    this.toggleCommentLines = function(state, doc, startRow, endRow) {
-        return 0;
-    };
+exports.TextileHighlightRules = TextileHighlightRules;
 
-    this.getNextLineIndent = function(state, line, tab) {
-        return this.$getIndent(line);
-    };
-
-    this.checkOutdent = function(state, line, input) {
-        return false;
-    };
-
-}).call(Mode.prototype);
-
-exports.Mode = Mode;
 });

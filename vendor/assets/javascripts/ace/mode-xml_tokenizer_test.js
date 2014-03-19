@@ -35,44 +35,36 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+if (typeof process !== "undefined") {
+    require("../../../support/paths");
+}
+
 define(function(require, exports, module) {
 
-var oop = require("pilot/oop");
-var TextMode = require("ace/mode/text").Mode;
-var JavaScriptMode = require("ace/mode/javascript").Mode;
-var CssMode = require("ace/mode/css").Mode;
-var Tokenizer = require("ace/tokenizer").Tokenizer;
-var HtmlHighlightRules = require("ace/mode/html_highlight_rules").HtmlHighlightRules;
-var XmlBehaviour = require("ace/mode/behaviour/xml").XmlBehaviour;
+var XmlMode = require("ace/mode/xml").Mode;
+var assert = require("ace/test/assertions");
 
-var Mode = function() {
-    var highlighter = new HtmlHighlightRules();
-    this.$tokenizer = new Tokenizer(highlighter.getRules());
-    this.$behaviour = new XmlBehaviour();
-    
-    this.$embeds = highlighter.getEmbeds();
-    this.createModeDelegates({
-      "js-": JavaScriptMode,
-      "css-": CssMode
-    });
+module.exports = {
+    setUp : function() {
+        this.tokenizer = new XmlMode().getTokenizer();
+    },
+
+    "test: tokenize1" : function() {
+
+        var line = "<Juhu>//Juhu Kinners</Kinners>";
+        var tokens = this.tokenizer.getLineTokens(line, "start").tokens;
+
+        assert.equal(5, tokens.length);
+        assert.equal("text", tokens[0].type);
+        assert.equal("keyword", tokens[1].type);
+        assert.equal("text", tokens[2].type);
+        assert.equal("keyword", tokens[3].type);
+        assert.equal("text", tokens[4].type);
+    }
 };
-oop.inherits(Mode, TextMode);
 
-(function() {
-
-    this.toggleCommentLines = function(state, doc, startRow, endRow) {
-        return 0;
-    };
-
-    this.getNextLineIndent = function(state, line, tab) {
-        return this.$getIndent(line);
-    };
-
-    this.checkOutdent = function(state, line, input) {
-        return false;
-    };
-
-}).call(Mode.prototype);
-
-exports.Mode = Mode;
 });
+
+if (typeof module !== "undefined" && module === require.main) {
+    require("asyncjs").test.testcase(module.exports).exec()
+}

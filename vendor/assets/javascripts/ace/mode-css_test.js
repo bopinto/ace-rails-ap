@@ -35,44 +35,47 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+if (typeof process !== "undefined") {
+    require("../../../support/paths");
+}
+
 define(function(require, exports, module) {
 
-var oop = require("pilot/oop");
-var TextMode = require("ace/mode/text").Mode;
-var JavaScriptMode = require("ace/mode/javascript").Mode;
+var EditSession = require("ace/edit_session").EditSession;
 var CssMode = require("ace/mode/css").Mode;
-var Tokenizer = require("ace/tokenizer").Tokenizer;
-var HtmlHighlightRules = require("ace/mode/html_highlight_rules").HtmlHighlightRules;
-var XmlBehaviour = require("ace/mode/behaviour/xml").XmlBehaviour;
+var assert = require("ace/test/assertions");
 
-var Mode = function() {
-    var highlighter = new HtmlHighlightRules();
-    this.$tokenizer = new Tokenizer(highlighter.getRules());
-    this.$behaviour = new XmlBehaviour();
-    
-    this.$embeds = highlighter.getEmbeds();
-    this.createModeDelegates({
-      "js-": JavaScriptMode,
-      "css-": CssMode
-    });
+module.exports = {
+    setUp : function() {
+        this.mode = new CssMode();
+    },
+
+    "test: toggle comment lines should not do anything" : function() {
+        var session = new EditSession(["  abc", "cde", "fg"].join("\n"));
+
+        var comment = this.mode.toggleCommentLines("start", session, 0, 1);
+        assert.equal(["  abc", "cde", "fg"].join("\n"), session.toString());
+    },
+
+
+    "test: lines should keep indentation" : function() {
+        assert.equal("   ", this.mode.getNextLineIndent("start", "   abc", "  "));
+        assert.equal("\t", this.mode.getNextLineIndent("start", "\tabc", "  "));
+    },
+
+    "test: new line after { should increase indent" : function() {
+        assert.equal("     ", this.mode.getNextLineIndent("start", "   abc{", "  "));
+        assert.equal("\t  ", this.mode.getNextLineIndent("start", "\tabc  { ", "  "));
+    },
+
+    "test: no indent increase after { in a comment" : function() {
+        assert.equal("   ", this.mode.getNextLineIndent("start", "   /*{", "  "));
+        assert.equal("   ", this.mode.getNextLineIndent("start", "   /*{  ", "  "));
+    }
 };
-oop.inherits(Mode, TextMode);
 
-(function() {
-
-    this.toggleCommentLines = function(state, doc, startRow, endRow) {
-        return 0;
-    };
-
-    this.getNextLineIndent = function(state, line, tab) {
-        return this.$getIndent(line);
-    };
-
-    this.checkOutdent = function(state, line, input) {
-        return false;
-    };
-
-}).call(Mode.prototype);
-
-exports.Mode = Mode;
 });
+
+if (typeof module !== "undefined" && module === require.main) {
+    require("asyncjs").test.testcase(module.exports).exec()
+}

@@ -34,45 +34,58 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
+ 
 define(function(require, exports, module) {
-
-var oop = require("pilot/oop");
-var TextMode = require("ace/mode/text").Mode;
-var JavaScriptMode = require("ace/mode/javascript").Mode;
-var CssMode = require("ace/mode/css").Mode;
-var Tokenizer = require("ace/tokenizer").Tokenizer;
-var HtmlHighlightRules = require("ace/mode/html_highlight_rules").HtmlHighlightRules;
-var XmlBehaviour = require("ace/mode/behaviour/xml").XmlBehaviour;
-
-var Mode = function() {
-    var highlighter = new HtmlHighlightRules();
-    this.$tokenizer = new Tokenizer(highlighter.getRules());
-    this.$behaviour = new XmlBehaviour();
     
-    this.$embeds = highlighter.getEmbeds();
-    this.createModeDelegates({
-      "js-": JavaScriptMode,
-      "css-": CssMode
-    });
+var oop = require("pilot/oop");
+var Mirror = require("ace/worker/mirror").Mirror;
+var coffee = require("ace/mode/coffee/coffee-script");
+
+window.addEventListener = function() {};
+
+
+var Worker = exports.Worker = function(sender) {
+    Mirror.call(this, sender);
+    this.setTimeout(200);
 };
-oop.inherits(Mode, TextMode);
+
+oop.inherits(Worker, Mirror);
 
 (function() {
-
-    this.toggleCommentLines = function(state, doc, startRow, endRow) {
-        return 0;
+    
+    this.onUpdate = function() {
+        var value = this.doc.getValue();
+        
+        try {
+            coffee.parse(value);
+        } catch(e) {
+            var m = e.message.match(/Parse error on line (\d+): (.*)/);
+            if (m) {
+                this.sender.emit("error", {
+                    row: parseInt(m[1]) - 1,
+                    column: null,
+                    text: m[2],
+                    type: "error"
+                });
+                return;
+            }
+            
+            if (e instanceof SyntaxError) {
+                var m = e.message.match(/ on line (\d+)/);
+                if (m) {                    
+                    this.sender.emit("error", {
+                        row: parseInt(m[1]) - 1,
+                        column: null,
+                        text: e.message.replace(m[0], ""),
+                        type: "error"
+                    });
+                }
+            }
+            return;
+        }
+        this.sender.emit("ok");
     };
+    
+}).call(Worker.prototype);
 
-    this.getNextLineIndent = function(state, line, tab) {
-        return this.$getIndent(line);
-    };
-
-    this.checkOutdent = function(state, line, input) {
-        return false;
-    };
-
-}).call(Mode.prototype);
-
-exports.Mode = Mode;
 });

@@ -38,41 +38,52 @@
 define(function(require, exports, module) {
 
 var oop = require("pilot/oop");
-var TextMode = require("ace/mode/text").Mode;
-var JavaScriptMode = require("ace/mode/javascript").Mode;
-var CssMode = require("ace/mode/css").Mode;
-var Tokenizer = require("ace/tokenizer").Tokenizer;
-var HtmlHighlightRules = require("ace/mode/html_highlight_rules").HtmlHighlightRules;
-var XmlBehaviour = require("ace/mode/behaviour/xml").XmlBehaviour;
+var TextHighlightRules = require("ace/mode/text_highlight_rules").TextHighlightRules;
 
-var Mode = function() {
-    var highlighter = new HtmlHighlightRules();
-    this.$tokenizer = new Tokenizer(highlighter.getRules());
-    this.$behaviour = new XmlBehaviour();
-    
-    this.$embeds = highlighter.getEmbeds();
-    this.createModeDelegates({
-      "js-": JavaScriptMode,
-      "css-": CssMode
-    });
+var DocCommentHighlightRules = function() {
+
+    this.$rules = {
+        "start" : [ {
+            token : "comment.doc.tag",
+            regex : "@[\\w\\d_]+" // TODO: fix email addresses
+        }, {
+            token : "comment.doc",
+            regex : "\\s+"
+        }, {
+            token : "comment.doc",
+            regex : "TODO"
+        }, {
+            token : "comment.doc",
+            regex : "[^@\\*]+"
+        }, {
+            token : "comment.doc",
+            regex : "."
+        }]
+    };
 };
-oop.inherits(Mode, TextMode);
+
+oop.inherits(DocCommentHighlightRules, TextHighlightRules);
 
 (function() {
 
-    this.toggleCommentLines = function(state, doc, startRow, endRow) {
-        return 0;
+    this.getStartRule = function(start) {
+        return {
+            token : "comment.doc", // doc comment
+            regex : "\\/\\*(?=\\*)",
+            next: start
+        };
+    };
+    
+    this.getEndRule = function (start) {
+        return {
+            token : "comment.doc", // closing comment
+            regex : "\\*\\/",
+            next  : start
+        };
     };
 
-    this.getNextLineIndent = function(state, line, tab) {
-        return this.$getIndent(line);
-    };
+}).call(DocCommentHighlightRules.prototype);
 
-    this.checkOutdent = function(state, line, input) {
-        return false;
-    };
+exports.DocCommentHighlightRules = DocCommentHighlightRules;
 
-}).call(Mode.prototype);
-
-exports.Mode = Mode;
 });
